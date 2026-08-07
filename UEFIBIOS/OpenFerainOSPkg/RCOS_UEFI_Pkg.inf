@@ -1,0 +1,20 @@
+[Defines]
+    INF_VERSION                    =  0x00010006
+    BASE_NAME                      =  bootia32
+    FILE_GUID                      =  3e5a7c9b-2f4d-4e8a-6c1f-9b3e7d5a9c4f
+    MODULE_TYPE                    =  UEFI_APPLICATION
+    VERSION_STRING                 =  1.0
+    ENTRY_POINT                    =  UefiMain
+[Sources]
+    entry.c
+    boot.nasm
+[Packages]
+    MdePkg/MdePkg.dec
+[LibraryClasses]
+    UefiLib
+    UefiApplicationEntryPoint 
+    UefiBootServicesTableLib
+    MemoryAllocationLib
+    BaseLib
+[Protocols]
+  gEfiBlockIoProtocolGuid
