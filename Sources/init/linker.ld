@@ -1,7 +1,7 @@
 ENTRY(init_setup)
 SECTIONS 
 {
-    . = 0;
+    . = 0x100000;
     .entry : {
         KEEP(*(.entry))
     }

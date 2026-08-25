@@ -21,17 +21,22 @@ init_setup:
     movl $0x00001000,%ecx
     rep movsl
     # jmp to the init code at 1MB
-    push $clear_section + 0x00100000
+    push $clear_section
     ret
 clear_section:
-    # Clear the Low 288KB section
+    # Clear the Low 640KB section
     movl $0x00000000,%edi
+    movl $0x00000000,%eax
+    movl $0x00010000,%ecx
+    cld
+    rep stosl
+    movl $0x00048000,%edi
     movl $0x00000000,%eax
     movl $0x00012000,%ecx
     cld
     rep stosl
     # jmp to init main
-    push $init_main + 0x00100000
+    push $init_main
     ret
 # Part of ISR
 .section .text
@@ -41,6 +46,7 @@ clear_section:
 .global GP_ISR
 .global SERVER_ISR
 .global VIDEO_ISR
+.global DEVICE_ISR
 default_ISR:
     pusha
     popa
@@ -62,15 +68,42 @@ GP_ISR:
     popa
     addl $4,%esp
     iret
+SERVER_ISR:
+    pusha
+    push %ds
+    push %es
+    movw $0x10,%bx
+    movw %bx,%ds
+    movw %bx,%es
+    call _SERVER_ISR_CMP
+    push %es
+    pop %ds
+    popa
+    iret
 VIDEO_ISR:
     pusha
     push %ds
     push %es
-    movw $0x08,%bx
+
+    movw $0x10,%bx
     movw %bx,%ds
     movw %bx,%es
     call _VIDEO_ISR_CMP
+
+    pop %es
+    pop %ds
+    popa
+    iret
+DEVICE_ISR:
+    pusha
+    push %ds
     push %es
+
+    movw $0x10,%bx
+    movw %bx,%ds
+    movw %bx,%es
+    call _DEVICE_ISR_CMP
+    pop %es
     pop %ds
     popa
     iret
@@ -123,6 +156,8 @@ _VIDEO_ISR_CMP:
     je _print_string
     cmpb $0x80,%ah
     je _set_cursor
+    cmpb $0x81,%ah
+    je _scolling
 _print_string:
     pushl %eax
     pushl %ecx
@@ -135,5 +170,12 @@ _set_cursor:
     pushl %edi
     pushl %esi
     call cursor_set
-    addl $4,%esp
+    addl $8,%esp
+    ret
+_scolling:
+    call vm_scolling
+    ret
+_SERVER_ISR_CMP:
+    ret
+_DEVICE_ISR_CMP:
     ret

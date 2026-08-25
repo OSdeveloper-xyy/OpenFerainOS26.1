@@ -3,6 +3,8 @@
 #include <asm/basic.h>
 #include <asm/task.h>
 #include <asm/interrupt.h>
+#include <device/DEVICERW.h>
+#include <FileSystem/FSALL.h>
 #include <stdio.h>
 extern void default_ISR();
 extern void DE_ISR();
@@ -10,9 +12,25 @@ extern void SS_ISR();
 extern void GP_ISR();
 extern void SERVER_ISR();
 extern void VIDEO_ISR();
+extern void DEVICE_ISR();
+uint32_t BootBus,BootDrive;
+uint8_t  BootID = 0;
+static inline void delay(uint32_t num){
+    for(int i = 0;i < num;i++){
+        for(int j = 0;j < 1000;j++){
+            __asm__ __volatile__("nop");
+        }
+    }
+    return;
+}
 static inline void set_system_int(uint32_t id_num,void(*func_offset)(void)){
-    uint32_t func = (uint32_t)func_offset + 0x00100000;
+    uint32_t func = (uint32_t)func_offset;
     set_id(id_num,0x08,func,PL_KERNEL,ID_TYPE_INT);
+    return;
+}
+static inline void set_user_int(uint32_t id_num,void(*func_offset)(void)){
+    uint32_t func = (uint32_t)func_offset;
+    set_id(id_num,0x08,func,PL_USER,ID_TYPE_INT);
     return;
 }
 static inline void idt_init(){
@@ -22,8 +40,9 @@ static inline void idt_init(){
     set_system_int(0,DE_ISR);                // Divide Error
     set_system_int(12,SS_ISR);               // Stack Segment
     set_system_int(13,GP_ISR);               // General Protection
-    set_system_int(64,SERVER_ISR);
-    set_system_int(65,VIDEO_ISR);
+    set_user_int(64,SERVER_ISR);
+    set_user_int(65,VIDEO_ISR);
+    set_user_int(66,DEVICE_ISR);
     return;
 }
 static inline void descriptor_init(){
@@ -38,15 +57,13 @@ static inline void descriptor_init(){
 }
 static inline void paging_init(){
     PDE_SET(0,KERNEL_PD_PHY_ADDR,KERNEL_PT_PHY_ADDR,P_STSTEM,P_READ_WRITE,P_PRESENT);     // Kernel 4MB
-    for(int i = 0;i < 1024;i++){
-        uint32_t PAGE_PHY_ADDR = (uint32_t)(i * PAGE_SIZE);
-        PTE_SET(i,KERNEL_PT_PHY_ADDR,PAGE_PHY_ADDR,P_STSTEM,P_READ_WRITE,P_PRESENT);
-    }
+    for(int i = 0;i < 1024;i++)PTE_SET(i,KERNEL_PT_PHY_ADDR,(uint32_t)(i * PAGE_SIZE),P_STSTEM,P_READ_WRITE,P_PRESENT);
     load_cr3(KERNEL_PD_PHY_ADDR);
     paging_enable();
     return;
 }
 static inline void mem_map_init(){
+    // Low 4MB has used;
     for(uint32_t i = 0;i < 1024;i++){
         mem_map_write(i);
     }
@@ -83,6 +100,11 @@ static inline void port_init(){
     outpb(0x40,0x04);
     return;
 }
+static inline void device_init(){
+    PCI_Enumeration();
+    PCI_USB_ENU();
+    return;
+}
 static inline void extension_init(){
     __asm__ __volatile__(
         "fninit\n"
@@ -99,11 +121,22 @@ static inline void extension_init(){
     );
     return;
 }
-static inline void window_init(){
-    printf("OpenFerain 26.1");
+static inline void shell_init(){
+    char line_string[] = "--------------------------------------------------------------------------------";
+    uint32_t line_len = 80,len_xy = 0x1700;
+    __asm__ __volatile__ (
+        "movb $0x00,%%ah\n"
+        "int $0x41\n"
+        :
+        : "S"(&line_string),"D"(len_xy),"c"(line_len),"a"(color)
+        : "ebx","edx","memory"
+    );
+    color = 0x70;
+    println("---**Welcome to OpenFerain OS 26.1**---");
+    color = 0x07;
     return;
 }
-static inline void creat_task(){
+static inline void jmp_shell(){
     return;
 }
 __attribute__((noinline)) void init_main(){
@@ -111,9 +144,9 @@ __attribute__((noinline)) void init_main(){
     paging_init();
     mem_map_init();
     port_init();
+    device_init();
     extension_init();
-    window_init();
-    creat_task();
+    shell_init();
+    jmp_shell();
     while(1);
-    //Else initialization code can be added here
 }
