@@ -10,6 +10,7 @@ extern void default_ISR();
 extern void DE_ISR();
 extern void SS_ISR();
 extern void GP_ISR();
+extern void PS2_ISR();
 extern void SERVER_ISR();
 extern void VIDEO_ISR();
 extern void DEVICE_ISR();
@@ -35,14 +36,15 @@ static inline void set_user_int(uint32_t id_num,void(*func_offset)(void)){
 }
 static inline void idt_init(){
     for (int i = 0; i < 256; i++){
-        set_system_int(i,default_ISR);       // Interrupt Descriptor Table Initialization
+        set_system_int(i,default_ISR);             // Interrupt Descriptor Table Initialization
     }
-    set_system_int(0,DE_ISR);                // Divide Error
-    set_system_int(12,SS_ISR);               // Stack Segment
-    set_system_int(13,GP_ISR);               // General Protection
-    set_user_int(64,SERVER_ISR);
-    set_user_int(65,VIDEO_ISR);
-    set_user_int(66,DEVICE_ISR);
+    set_system_int(0x00,DE_ISR    );               // Divide Error
+    set_system_int(0x0C,SS_ISR    );               // Stack Segment
+    set_system_int(0x0D,GP_ISR    );               // General Protection
+    set_user_int  (0x21,PS2_ISR   );
+    set_user_int  (0x40,SERVER_ISR);
+    set_user_int  (0x41,VIDEO_ISR );
+    set_user_int  (0x42,DEVICE_ISR);
     return;
 }
 static inline void descriptor_init(){
@@ -56,8 +58,9 @@ static inline void descriptor_init(){
     return;
 }
 static inline void paging_init(){
-    PDE_SET(0,KERNEL_PD_PHY_ADDR,KERNEL_PT_PHY_ADDR,P_STSTEM,P_READ_WRITE,P_PRESENT);     // Kernel 4MB
-    for(int i = 0;i < 1024;i++)PTE_SET(i,KERNEL_PT_PHY_ADDR,(uint32_t)(i * PAGE_SIZE),P_STSTEM,P_READ_WRITE,P_PRESENT);
+    PDE_SET(0,KERNEL_PD_PHY_ADDR,KERNEL_PT_PHY_ADDR,P_SYSTEM,P_READ_WRITE,P_PRESENT);     // Kernel 4MB
+    for(int i = 1;i < 1023;i++)PDE_SET(i,KERNEL_PD_PHY_ADDR,TEMP_PT_BASE,P_SYSTEM,P_READ_WRITE,P_PRESENT);
+    for(int i = 0;i < 1024;i++)PTE_SET(i,KERNEL_PT_PHY_ADDR,(uint32_t)(i * PAGE_SIZE),P_YTSTEM,P_READ_WRITE,P_PRESENT);
     load_cr3(KERNEL_PD_PHY_ADDR);
     paging_enable();
     return;
@@ -102,7 +105,12 @@ static inline void port_init(){
 }
 static inline void device_init(){
     PCI_Enumeration();
+    PCI_ISA_ENU();
+    PCI_IDE_ENU();
+    PCI_SATA_ENU();
     PCI_USB_ENU();
+    PCI_SDHOST_ENU();
+    PCI_IEEE1394_ENU();
     return;
 }
 static inline void extension_init(){

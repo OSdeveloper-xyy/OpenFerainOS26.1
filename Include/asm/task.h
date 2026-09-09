@@ -67,39 +67,24 @@ static inline uint32_t get_available_page(){
     return ret_val;
 }
 static inline void creat_task(){
-    /*uint32_t pd_base = get_available_page();
-    mem_map_write(pd_base);
-    pd_base = pd_base * 0x1000;
-    uint32_t pt_base = get_available_page();
-    mem_map_write(pt_base);
-    pt_base = pt_base * 0x1000;
-    uint32_t task_base = get_available_page();
-    mem_map_write(task_base);
-    PDE_SET((task_base / 1024),KERNEL_PD_PHY_ADDR,TEMP_PT_BASE,P_STSTEM,P_READ_WRITE,P_PRESENT);
-    for (int i = 0; i < 1024; i++)PTE_SET(i,TEMP_PT_BASE,((task_base / 1024) * 0x400000 + i * 0x1000),P_STSTEM,P_READ_WRITE,P_PRESENT);
-    PDE_SET((task_base / 1024),pd_base,pt_base,P_USER,P_ONLY_READ,P_PRESENT);// Task Page Directory Entry
-    PTE_SET((task_base % 1024),pt_base,(task_base * 0x1000),P_USER,P_ONLY_READ,P_PRESENT);
-    task_base = task_base * 0x1000;
-    PDE_SET(0,pd_base,KERNEL_PT_PHY_ADDR,P_STSTEM,P_READ_WRITE,P_PRESENT);   // Kernel Page Directory Entry
-    return;*/
     uint32_t pd_base = get_available_page();
     mem_map_write(pd_base);
-    pd_base = pd_base * 0x1000;
-    PDE_SET((pd_base / 1024),KERNEL_PD_PHY_ADDR,TEMP_PT_BASE,P_STSTEM,P_READ_WRITE,P_PRESENT);
-    for (int i = 0; i < 1024; i++)PTE_SET(i,TEMP_PT_BASE,((pd_base / 1024) * 0x400000 + i * 0x1000),P_STSTEM,P_READ_WRITE,P_PRESENT);
-    uint32_t pt_base = get_available_page();
-    mem_map_write(pt_base);
-    pt_base = pt_base * 0x1000;
-    PDE_SET(0,pd_base,pt_base,P_STSTEM,P_READ_WRITE,P_PRESENT);
-    PDE_SET((pd_base / 1024),pd_base,pt_base,P_USER,P_ONLY_READ,P_PRESENT);
-
-    PDE_SET((pt_base / 1024),KERNEL_PD_PHY_ADDR,TEMP_PT_BASE,P_STSTEM,P_READ_WRITE,P_PRESENT);
-    for (int i = 0; i < 1024; i++)PTE_SET(i,TEMP_PT_BASE,((pt_base / 1024) * 0x400000 + i * 0x1000),P_STSTEM,P_READ_WRITE,P_PRESENT);
-    uint32_t task_base = get_available_page();
-    mem_map_write(task_base);
-    task_base = task_base * 0x1000;
-    PTE_SET((task_base % 0x400000)/4,pt_base,task_base,P_USER,P_ONLY_READ,P_PRESENT);
+    pd_base <<= 3;
+    PTE_SET((pd_base % 0x400000)>> 3,TEMP_PT_BASE,pd_base,P_SYSTEM,P_READ_WRITE,P_PRESENT);
+    uint32_t code_pt_base = get_available_page();
+    mem_map_write(code_pt_base);
+    code_pt_base <<= 3;
+    PDE_SET(0,KERNEL_PT_PHY_ADDR,pd_base,P_SYSTEM,P_READ_WRITE,P_PRESENT);
+    uint32_t task_code_base = get_available_page();
+    mem_map_write(task_code_base);
+    task_code_base <<= 3;
+    PDE_SET(task_code_base / 0x400000,code_pt_base,pd_base,P_USER,P_ONLY_READ,P_PRESENT);
+    PTE_SET((code_pt_base % 0X400000) >> 3,TEMP_PT_BASE,code_pt_base,P_SYSTEM,P_READ_WRITE,P_PRESENT);
+    PTE_SET((task_code_base % 0x400000) >> 3,code_pt_base,task_code_base,P_USER,P_ONLY_READ,P_PRESENT);
+    PTE_SET((task_code_base % 0x400000) >> 3,TEMP_PT_BASE,task_code_base,P_SYSTEM,P_READ_WRITE,P_PRESENT);
+    //device read to task_code_base
     
+    return;
 }
 
 #endif

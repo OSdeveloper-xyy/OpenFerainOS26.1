@@ -5,7 +5,7 @@
 #define KERNEL_PD_PHY_ADDR   0x00000000
 #define KERNEL_PT_PHY_ADDR   0x00001000
 #define P_USER               0x01
-#define P_STSTEM             0x00
+#define P_SYSTEM             0x00
 #define P_READ_WRITE         0x01
 #define P_ONLY_READ          0x00
 #define P_PRESENT            0x01

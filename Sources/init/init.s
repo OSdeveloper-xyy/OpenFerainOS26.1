@@ -44,6 +44,7 @@ clear_section:
 .global DE_ISR
 .global SS_ISR
 .global GP_ISR
+.global PS2_ISR
 .global SERVER_ISR
 .global VIDEO_ISR
 .global DEVICE_ISR
@@ -67,6 +68,16 @@ GP_ISR:
     pusha
     popa
     addl $4,%esp
+    iret
+PS2_ISR:
+    pusha
+    pushl %edi
+    call ISR_FOR_PS2
+    addl $4,%esp
+    movb $0x20,%al
+    movw $0x20,%dx
+    outb %al,%dx
+    popa
     iret
 SERVER_ISR:
     pusha

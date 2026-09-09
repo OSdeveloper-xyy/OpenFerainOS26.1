@@ -4,6 +4,10 @@
 #include <device/PCI.h>
 static inline void PCI_USB_ENU(){
     println("[USB] USB starts enumerating devices");
+    if(usb_device[0] == 0xFFFFFFFF){
+        println("[USB] Not Found Any USB Control!!!");
+        return;
+    }
     for(int i = 0;i < 8;i++){
         if(usb_device[i] == 0xFFFFFFFF)break;
         printf("[USB] Enumerating USB Contraller ");

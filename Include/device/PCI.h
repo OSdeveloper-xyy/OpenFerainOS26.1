@@ -7,17 +7,16 @@
 #include <bit.h>
 
 #define PCIE_DEVICE_MAX     1024
+#define PCIE_CONF_MEM_BASE  0x00050000
+
 #define CLASS_USB           0x0C0300 
-#define CLASS_SMBUS         0x0C0500 
 #define CLASS_IDE           0x010100 
-#define CLASS_SATA_BUS      0x010600 
-#define CLASS_RAID          0x010400 
+#define CLASS_SATA_BUS      0x010600
 #define CLASS_ISA_BRIDGE    0x060100 
-#define CLASS_PCI_BRIDGE    0x060400 
-#define CLASS_AC97          0x040100 
-#define CLASS_HDA           0x040300 
+#define CLASS_PCI_BRIDGE    0x060400
 #define CLASS_IEEE1394      0x0C0000 
 #define CLASS_SD_HOST       0x080500
+
 struct pcie_device{
     uint8_t   Bus;
     uint8_t   Device;
@@ -33,22 +32,28 @@ struct pcie_device{
     uint32_t  Conf_Base5;
 };
 struct pcie_device device[PCIE_DEVICE_MAX];
-uint32_t pcie_conf_mem_base = 0x00050000;
+uint32_t pcie_conf_mem_base = PCIE_CONF_MEM_BASE;
 uint16_t pcie_conf_io_base = 0x1000;
-uint8_t device_count[12]= {0};
-uint32_t usb_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t IDE_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t SMBus_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t SATA_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t RAID_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t ISA_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t PCI_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t AC79_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t HDA_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t IEEE1394_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
-uint32_t SD_device[8] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
+uint8_t device_count[8]= {0};
+uint32_t ISA_device[4] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
+uint32_t IDE_device[4] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
+uint32_t IEEE1394_device[4] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
+uint32_t SD_device[4] = {0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF};
+uint32_t usb_device[8] = {
+    0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,
+    0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF
+};
+uint32_t SATA_device[8] = {
+    0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,
+    0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF
+};
+uint32_t PCI_device[16] = {
+    0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,
+    0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,
+    0xFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,
+    0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF,0XFFFFFFFF
+};
 uint8_t continue_flag = 0;
-
 static inline uint32_t Convert_to_32data(uint8_t bus,uint8_t dev,uint8_t function,uint8_t reg){
     uint32_t ret_val =
         (1 << 31)                     |
@@ -176,71 +181,47 @@ static inline void PCI_Enumeration(){
                     dec_digit(k);
                     println(&num_string[0]);
 
-                    if((device[ans].ClassCode & 0xFFFF00) == CLASS_USB){
-                        println("[PCI] Device is USB control!");
-                        if(device_count[0] <= 8){
-                            usb_device[device_count[0]] = ans;
+                    if((device[ans].ClassCode & 0xFFFF00) == CLASS_PCI_BRIDGE){
+                        println("[PCI] Device is PCI Bridge!");
+                        if(device_count[0] <= 16){
+                            PCI_device[device_count[0]] = ans;
                             device_count[0] += 1;
                         }
-                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_SMBUS){
-                        println("[PCI] Device is SMBus!");
+                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_USB){
+                        println("[PCI] Device is USB Controller!");
                         if(device_count[1] <= 8){
-                            SMBus_device[device_count[1]] = ans;
+                            usb_device[device_count[1]] = ans;
                             device_count[1] += 1;
-                        }
-                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_IDE){
-                        println("[PCI] Device is IDE Control!");
-                        if(device_count[2] <= 8){
-                            IDE_device[device_count[2]] = ans;
-                            device_count[2] += 1;
                         }
                     }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_SATA_BUS){
                         println("[PCI] Device is SATA Bus");
-                        if(device_count[3] <= 8){
-                            SATA_device[device_count[3]] = ans;
-                            device_count[3] += 1;
+                        if(device_count[2] <= 8){
+                            SATA_device[device_count[2]] = ans;
+                            device_count[2] += 1;
                         }
-                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_RAID){
-                        println("[PCI] Device is RAID control!");
-                        if(device_count[4] <= 8){
-                            RAID_device[device_count[4]] = ans;
-                            device_count[4] += 1;
+                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_IDE){
+                        println("[PCI] Device is IDE Controller!");
+                        if(device_count[3] <= 4){
+                            IDE_device[device_count[3]] = ans;
+                            device_count[3] += 1;
                         }
                     }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_ISA_BRIDGE){
                         println("[PCI] Device is ISA Bridge!");
-                        if(device_count[6] <= 8){
-                            ISA_device[device_count[6]] = ans;
-                            device_count[6] += 1;
-                        }
-                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_PCI_BRIDGE){
-                        println("[PCI] Device is PCI Bridge!");
-                        if(device_count[7] <= 8){
-                            PCI_device[device_count[7]] = ans;
-                            device_count[7] += 1;
-                        }
-                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_AC97){
-                        println("[PCI] Device is AC97 Control!");
-                        if(device_count[8] <= 8){
-                            AC79_device[device_count[8]] = ans;
-                            device_count[8] += 1;
-                        }
-                    }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_HDA){
-                        println("[PCI] Device is HDA Control!");
-                        if(device_count[9] <= 8){
-                            HDA_device[device_count[9]] = ans;
-                            device_count[9] += 1;
+                        if(device_count[4] <= 4){
+                            ISA_device[device_count[4]] = ans;
+                            device_count[4] += 1;
                         }
                     }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_IEEE1394){
-                        println("[PCI] Device is IEEE1394 Control!");
-                        if(device_count[10] <= 8){
-                            IEEE1394_device[device_count[10]] = ans;
-                            device_count[10] += 1;
+                        println("[PCI] Device is IEEE1394 Controller!");
+                        if(device_count[5] <= 4){
+                            IEEE1394_device[device_count[5]] = ans;
+                            device_count[5] += 1;
                         }
                     }else if((device[ans].ClassCode & 0xFFFF00) == CLASS_SD_HOST){
-                        println("[PCI] Device is SD Host Control!");
-                        if(device_count[11] <= 8){
-                            SD_device[device_count[11]] = ans;
-                            device_count[11] += 1;
+                        println("[PCI] Device is SD Host Controller!");
+                        if(device_count[6] <= 4){
+                            SD_device[device_count[6]] = ans;
+                            device_count[6] += 1;
                         }
                     }
 
