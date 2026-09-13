@@ -60,7 +60,7 @@ static inline void descriptor_init(){
 static inline void paging_init(){
     PDE_SET(0,KERNEL_PD_PHY_ADDR,KERNEL_PT_PHY_ADDR,P_SYSTEM,P_READ_WRITE,P_PRESENT);     // Kernel 4MB
     for(int i = 1;i < 1023;i++)PDE_SET(i,KERNEL_PD_PHY_ADDR,TEMP_PT_BASE,P_SYSTEM,P_READ_WRITE,P_PRESENT);
-    for(int i = 0;i < 1024;i++)PTE_SET(i,KERNEL_PT_PHY_ADDR,(uint32_t)(i * PAGE_SIZE),P_YTSTEM,P_READ_WRITE,P_PRESENT);
+    for(int i = 0;i < 1024;i++)PTE_SET(i,KERNEL_PT_PHY_ADDR,(uint32_t)(i * PAGE_SIZE),P_SYSTEM,P_READ_WRITE,P_PRESENT);
     load_cr3(KERNEL_PD_PHY_ADDR);
     paging_enable();
     return;
